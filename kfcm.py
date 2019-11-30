@@ -52,7 +52,7 @@ class KFCM:
 
     def cost_function(self):
         """
-        Calcula a função de custo para a FCM
+        Calcula a função de custo para a KFCM
         """
         ans = 0
 
@@ -101,6 +101,9 @@ class KFCM:
                 update += ((1 - centroid_kernel)/(1 - kernel))**(2/(self.m - 1))
 
             self.membership[:, i] = 1 / update
+
+
+
 
     ###
     ### Class Methods
