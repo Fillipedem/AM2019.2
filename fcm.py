@@ -2,10 +2,11 @@
 Implementação do algoritmo Fuzzy C-Means
 """
 import numpy as np
-
+from cluster_model import ClusterModel
 
 class FCM:
 
+    ### init
     def __init__(self, data, num_clusters, m=2):
 
         # check
@@ -19,34 +20,31 @@ class FCM:
         self.m = m
 
 
-    def __initialize_centroids(self, num_clusters):
+    ### interface
+    def predict(self, data):
+        ans = np.zeros(len(data))
+
+        #
+        x =  data - self.centroids[0]
+        distance = np.sqrt(np.sum((x*x), axis=1))
+        #
+        for i in range(len(self.centroids)):
+            # calculando norma
+            x =  data - self.centroids[i]
+            d = np.sqrt(np.sum((x*x), axis=1))
+
+            bool_idx = d < distance
+            distance[bool_idx] = d[bool_idx]
+            ans[bool_idx] = i
+
+        return ans
+
+
+    def get_crisp_partition(self):
         """
-        Inicializa os centroids + membership
+        Retorna a partição hard
         """
-        # genereta random centroids with range [0, 1]
-        n, d = self.data.shape
-        centroids = np.random.rand(num_clusters, d)
-
-        # scale [0, 1] to [data.min, data.max]
-        data_min, data_max = self.data.min(), self.data.max()
-        centroids = np.interp(centroids, (0, 1), (data_min, data_max))
-
-        return centroids
-
-
-    def __initialize_membership(self, num_clusters):
-        """
-        Inicializando os valores da membership
-        """
-        n, d = self.data.shape
-
-        # somando para 1 cada membership
-        u = []
-        for i in range(len(self.data)):
-            x = np.random.dirichlet(np.ones(num_clusters))
-            u.append(x)
-
-        return np.array(u)
+        pass
 
 
     def cost_function(self):
@@ -106,3 +104,36 @@ class FCM:
                 soma += (datac[i] / datac[j])**(2/(self.m - 1))
 
             self.membership[:, i] = 1/soma
+
+
+    ###
+    ### class methods
+    ###
+
+    def __initialize_centroids(self, num_clusters):
+        """
+        Inicializa os centroids + membership
+        """
+        # genereta random centroids with range [0, 1]
+        initial_clusters_index = np.random.randint(low=0, high=len(self.data),
+                                                    size=num_clusters)
+
+
+        centroids = self.data[initial_clusters_index]
+
+        return centroids
+
+
+    def __initialize_membership(self, num_clusters):
+        """
+        Inicializando os valores da membership
+        """
+        n, d = self.data.shape
+
+        # somando para 1 cada membership
+        u = []
+        for i in range(len(self.data)):
+            x = np.random.dirichlet(np.ones(num_clusters))
+            u.append(x)
+
+        return np.array(u)
