@@ -54,14 +54,15 @@ class VKFCM:
         U = self.U**self.m
         for i in range(len(self.centroids)):
 
-            numerador = 0
-            denominador = 0
+            numerador = np.zeros(self.d)
+            denominador = np.zeros(self.d)
             for k in range(len(self.data)):
                 soma = U[k, i] * self.gaussian_kernel(self.data[k], self.centroids[i])
                 numerador += soma*self.data[k]
                 denominador += soma
 
-            np.divide(numerador, denominador, self.centroids[i] , where=denominador!=0)
+
+            self.centroids[i] = numerador/denominador
 
 
     def update_weights(self):
@@ -80,7 +81,7 @@ class VKFCM:
         numerador = (np.prod(soma.sum(axis=0)))**(1/self.d)
         for p in range(self.d):
             divisor = soma[:, p].sum()
-            np.divide(numerador, divisor, self.weights[p] , where=divisor!=0)
+            self.weights[p] = numerador/divisor
 
 
     def update_membership(self):
@@ -92,7 +93,7 @@ class VKFCM:
             for k in range(len(self.data)):
                 values[(k, i)] = self.distance(self.data[k], self.centroids[i])
 
-                
+
         for i in range(len(self.centroids)):
             for k in range(len(self.data)):
                 update = 0
@@ -159,8 +160,9 @@ class VKFCM:
         ### Membership
         n, d = self.data.shape
 
-        # somando para 1 cada cluster
-        self.U = np.ones((n, num_clusters)) * (1/num_clusters)
+        # somando para 1 cada cluster/inicializar random
+        U = np.random.rand(n, self.num_clusters)
+        self.U = U/U.sum(axis=1).reshape(-1, 1)
 
         # Número de atributos
         self.d = d
