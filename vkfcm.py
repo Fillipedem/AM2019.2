@@ -39,45 +39,78 @@ class VKFCM:
         """
         Calcula a função de custo para a VKFCM
         """
-        pass
+        cost = 0
+        for i in range(len(self.centroids)):
+            for k in range(len(self.data)):
+                cost += self.U[k, i]*self.distance(self.data[k], self.centroids[i])
+
+        return cost
 
 
     def update_centroids(self):
         """
         Atualizando os centroids
         """
-
-        # for each centroid
+        U = self.U**self.m
         for i in range(len(self.centroids)):
 
-            c = self.centroids[i]
-            kernel = self.distance(self.data, c)
-            U = (self.U[:, i])**self.m
-            # atualizando
-            numerador = np.sum(((self.data.T*kernel) * U), axis=1)
-            denominador = (U*kernel).sum()
-            np.divide(numerador, denominador,  out=self.centroids[i], where=denominador!=0)
+            numerador = 0
+            denominador = 0
+            for k in range(len(self.data)):
+                soma = U[k, i] * self.gaussian_kernel(self.data[k], self.centroids[i])
+                numerador += soma*self.data[k]
+                denominador += soma
+
+            np.divide(numerador, denominador, self.centroids[i] , where=denominador!=0)
+
+
+    def update_weights(self):
+        """
+        Atualiza os pesos de cada atributo
+        """
+        U = self.U**self.m
+
+        soma = np.zeros((len(self.centroids), self.d))
+        for i in range(len(self.centroids)):
+
+            for k in range(len(self.data)):
+                soma[i] += U[k, i] * 2*(1 - self.gaussian_kernel(self.data[k], self.centroids[i]))
+
+
+        numerador = (np.prod(soma.sum(axis=0)))**(1/self.d)
+        for p in range(self.d):
+            divisor = soma[:, p].sum()
+            np.divide(numerador, divisor, self.weights[p] , where=divisor!=0)
 
 
     def update_membership(self):
         """
         Atualiza os valores de U de cada exemplo
         """
-
+        values = {}
         for i in range(len(self.centroids)):
-            # centroid Kernel
-            d1 = self.distance(self.data, self.centroids[i])
-            update = 0
-            for h in range(len(self.centroids)):
+            for k in range(len(self.data)):
+                values[(k, i)] = self.distance(self.data[k], self.centroids[i])
 
-                # calculando kernel
-                d2 = self.distance(self.data, self.centroids[h])
-                tmp = np.zeros(len(d1))
-                np.divide(d1, d2, out=tmp, where=d2!=0)
-                update += tmp**(2/(self.m - 1))
+                
+        for i in range(len(self.centroids)):
+            for k in range(len(self.data)):
+                update = 0
+                for h in range(len(self.centroids)):
+                    if values[(k, h)] == 0:
+                        continue
+                    update += (values[(k, i)]/values[(k, h)])**(1/(self.m - 1))
 
-            np.divide(1, update, out=self.U[:, i], where=update!=0)
+                if update != 0:
+                    self.U[k, i] = 1/update
+                #np.divide(1, update[0], self.U[k, i] , where=update!=0)
+    #
+    def crisp(self):
+        target = []
+        for i in range(len(self.U)):
+            target.append(np.argmax(self.U[i]))
 
+        return target
 
     ###
     ### Class Methods
@@ -92,38 +125,23 @@ class VKFCM:
             return np.exp(-((x-y)**2/self.sigma))
 
 
-    def update_weights(self):
-        """
-        Atualiza os pesos de cada atributo
-        """
-        U = self.U**self.m
-        params_values = np.zeros(self.d)
-        for i in range(self.d):
-
-            tmp = 0
-            for j in range(len(self.centroids)):
-                kernel = 2*(1 - self.gaussian_kernel(self.data[:, i], self.centroids[j, i], i))
-
-                # atualizando
-                tmp += np.sum(kernel * U[:, j])
-
-            params_values[i] = tmp
-
-        # Atualizando
-        for i in range(self.d):
-            if params_values[i] < 0.00005:
-                continue
-            self.weights[i] = (np.prod(params_values)**(1/self.d))/params_values[i]
-
 
     def distance(self, x, y):
         """
         Calcula a distancia adaptativa global
         """
         kernel = 2*(1 - self.gaussian_kernel(x, y))
-        ans = self.weights[0]*kernel[:, 0]
+        if len(kernel.shape) > 1:
+            ans = self.weights[0]*kernel[:, 0]
+        else:
+            ans = self.weights[0]*kernel[0]
+
         for i in range(1, self.d):
-            ans += self.weights[i]*kernel[:, i]
+            if len(kernel.shape) > 1:
+                ans += self.weights[i]*kernel[:, i]
+            else:
+                ans += self.weights[i]*kernel[i]
+
 
         return ans
 
@@ -142,7 +160,7 @@ class VKFCM:
         n, d = self.data.shape
 
         # somando para 1 cada cluster
-        self.U = np.ones((n, d)) * (1/num_clusters)
+        self.U = np.ones((n, num_clusters)) * (1/num_clusters)
 
         # Número de atributos
         self.d = d
