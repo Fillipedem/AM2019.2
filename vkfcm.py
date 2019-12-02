@@ -172,6 +172,7 @@ class VKFCM:
 
         # Calculando os valores antecipadamente para 2sigma**2
         diff = np.linalg.norm(self.data[None, :, :] - self.data[:, None, :], axis=2)
+        diff = diff**2
 
         sigma = [np.mean([np.quantile(diff[i], 0.1),
                         np.quantile(diff[i], 0.9)]) for i in range(self.d)]
