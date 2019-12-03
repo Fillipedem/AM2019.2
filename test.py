@@ -20,8 +20,8 @@ df = pd.read_csv("./data/segmentation.test")
 df = df.drop(columns=['REGION-PIXEL-COUNT'])
 
 # create two views
-shape_view = df.iloc[:, 1:-9]
-rgb_view =  df.iloc[:, -9:]
+shape_view = df.iloc[:, 1:-10]
+rgb_view =  df.iloc[:, -10:]
 target = df.iloc[:, 0]
 
 # parametros do cluster
@@ -75,11 +75,12 @@ def save_model(model, model_name, target):
 ###
 print("Iniciando Shape_View")
 best_model = VKFCM(shape_view.values, num_clusters, m=m)
-for i in range(20):
+for i in range(10):
     print("Iter: ", i)
     model = fit_model(shape_view.values, num_clusters, m)
     if model.cost_function() < best_model.cost_function():
         best_model = model
+    print(best_model.cost_function())
 
 # save model
 save_model(best_model, 'Shape_view', target)
